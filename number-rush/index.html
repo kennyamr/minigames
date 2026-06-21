@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Number Rush</title>
+  <style>
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a24;
+      --surface2: #22222f;
+      --accent: #7c6fff;
+      --accent2: #ff6fad;
+      --success: #4ecca3;
+      --text: #f0f0f8;
+      --muted: #7a7a9a;
+      --pressed-bg: #2a2a3a;
+      --pressed-text: #3a3a5a;
+      --cell-default: #252535;
+      --cell-border: #35355a;
+      --radius: 14px;
+      --cell-radius: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px 12px 24px;
+      gap: 14px;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* ── Records bar ── */
+    .records {
+      width: 100%;
+      max-width: 480px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      border: 1px solid #2a2a3e;
+    }
+
+    .record-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+    }
+
+    .record-label {
+      font-size: 0.62rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+
+    .record-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--success);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.3px;
+    }
+
+    .record-value.none {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .record-divider {
+      width: 1px;
+      background: #2a2a3e;
+      align-self: stretch;
+    }
+
+    /* ── Controls ── */
+    .controls {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .control-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+      min-width: 48px;
+    }
+
+    .toggle-group {
+      display: flex;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 8px 6px;
+      border: 1.5px solid var(--cell-border);
+      border-radius: 8px;
+      background: var(--cell-default);
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      text-align: center;
+      user-select: none;
+    }
+
+    .toggle-btn.active {
+      border-color: var(--accent);
+      background: rgba(124, 111, 255, 0.15);
+      color: var(--text);
+    }
+
+    /* ── Timer & Next ── */
+    .status-bar {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .timer {
+      font-size: 2.6rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -1px;
+      color: var(--text);
+      transition: color 0.2s;
+      line-height: 1;
+    }
+
+    .timer.running { color: var(--accent); }
+    .timer.done { color: var(--success); }
+
+    .next-hint {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+
+    .next-label {
+      font-size: 0.62rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+
+    .next-number {
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+      transition: transform 0.15s ease;
+    }
+
+    .next-number.hidden { opacity: 0; pointer-events: none; }
+
+    /* ── Start button ── */
+    .start-btn {
+      width: 100%;
+      max-width: 480px;
+      padding: 15px;
+      border: none;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, var(--accent), #5a4fff);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s;
+      box-shadow: 0 4px 24px rgba(124, 111, 255, 0.35);
+      user-select: none;
+    }
+
+    .start-btn:active {
+      transform: scale(0.97);
+      box-shadow: 0 2px 12px rgba(124, 111, 255, 0.2);
+    }
+
+    .start-btn.restart {
+      background: linear-gradient(135deg, #ff6fad, #d44f8f);
+      box-shadow: 0 4px 24px rgba(255, 111, 173, 0.3);
+    }
+
+    /* ── Grid ── */
+    .grid-wrapper {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .grid.size-4 { grid-template-columns: repeat(4, 1fr); }
+    .grid.size-5 { grid-template-columns: repeat(5, 1fr); }
+    .grid.size-6 { grid-template-columns: repeat(6, 1fr); }
+
+    /* ── Cell ── */
+    .cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--cell-radius);
+      border: 1.5px solid var(--cell-border);
+      background: var(--cell-default);
+      font-weight: 800;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s ease, border-color 0.15s ease,
+                  color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Font size by grid */
+    .grid.size-4 .cell { font-size: clamp(1rem, 5vw, 1.5rem); }
+    .grid.size-5 .cell { font-size: clamp(0.8rem, 4vw, 1.2rem); }
+    .grid.size-6 .cell { font-size: clamp(0.65rem, 3.2vw, 1rem); }
+
+    .cell:active { transform: scale(0.91); }
+
+    /* Idle (game not started) */
+    .cell.idle {
+      cursor: default;
+      opacity: 0.5;
+    }
+
+    /* Active / waiting to be pressed */
+    .cell.active {
+      background: var(--cell-default);
+      border-color: #4a4a6a;
+      color: var(--text);
+    }
+
+    .cell.active:hover {
+      border-color: var(--accent);
+      background: rgba(124, 111, 255, 0.08);
+    }
+
+    /* Pressed (feedback mode) */
+    .cell.pressed {
+      background: var(--pressed-bg);
+      border-color: #2e2e4a;
+      color: var(--pressed-text);
+    }
+
+    /* Pressed (no-feedback mode — same as active, invisible) */
+    .cell.pressed-nofeedback {
+      background: var(--cell-default);
+      border-color: #4a4a6a;
+      color: var(--text);
+    }
+
+    /* Next to press highlight */
+    .cell.next-target {
+      /*border-color: var(--accent);*/
+      box-shadow: 0 0 0 2px rgba(124, 111, 255, 0.35);
+    }
+
+    /* Wrong press flash */
+    .cell.wrong {
+      animation: wrongFlash 0.35s ease;
+    }
+
+    @keyframes wrongFlash {
+      0%   { background: rgba(255, 80, 80, 0.35); border-color: #ff5050; }
+      100% { background: var(--cell-default); border-color: #4a4a6a; }
+    }
+
+    /* Correct press flash */
+    .cell.correct-flash {
+      animation: correctFlash 0.28s ease forwards;
+    }
+
+    @keyframes correctFlash {
+      0%   { background: rgba(78, 204, 163, 0.45); border-color: var(--success); }
+      100% { background: var(--pressed-bg); border-color: #2e2e4a; }
+    }
+
+    /* Done state */
+    .cell.done-cell {
+      background: rgba(78, 204, 163, 0.12);
+      border-color: rgba(78, 204, 163, 0.4);
+      color: var(--success);
+      animation: popIn 0.25s ease;
+    }
+
+    @keyframes popIn {
+      0%   { transform: scale(1.12); }
+      60%  { transform: scale(0.95); }
+      100% { transform: scale(1); }
+    }
+
+    /* ── Message ── */
+    .message {
+      width: 100%;
+      max-width: 480px;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .message.success {
+      color: var(--success);
+      font-size: 1rem;
+    }
+
+    .message.new-record {
+      color: var(--accent2);
+      font-size: 1rem;
+      animation: pulse 0.6s ease infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 0.7; }
+      to   { opacity: 1; }
+    }
+
+    /* ── Responsive tweaks ── */
+    @media (max-width: 360px) {
+      body { padding: 10px 8px 20px; gap: 10px; }
+      .timer { font-size: 2rem; }
+    }
+
+    @media (min-width: 500px) {
+      body { padding: 24px 16px 32px; gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">Number Rush</div>
+  </header>
+
+  <!-- Best times -->
+  <div class="records">
+    <div class="record-item">
+      <span class="record-label">4×4 Best</span>
+      <span class="record-value none" id="rec-4">—</span>
+    </div>
+    <div class="record-divider"></div>
+    <div class="record-item">
+      <span class="record-label">5×5 Best</span>
+      <span class="record-value none" id="rec-5">—</span>
+    </div>
+    <div class="record-divider"></div>
+    <div class="record-item">
+      <span class="record-label">6×6 Best</span>
+      <span class="record-value none" id="rec-6">—</span>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="control-row">
+      <span class="control-label">Grid</span>
+      <div class="toggle-group">
+        <button class="toggle-btn active" data-grid="4" onclick="setGrid(4)">4 × 4</button>
+        <button class="toggle-btn" data-grid="5" onclick="setGrid(5)">5 × 5</button>
+        <button class="toggle-btn" data-grid="6" onclick="setGrid(6)">6 × 6</button>
+      </div>
+    </div>
+    <div class="control-row">
+      <span class="control-label">Mode</span>
+      <div class="toggle-group">
+        <button class="toggle-btn active" data-mode="feedback" onclick="setMode('feedback')">👁 Feedback</button>
+        <button class="toggle-btn" data-mode="nofeedback" onclick="setMode('nofeedback')">🔮 Challenge</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timer & Next -->
+  <div class="status-bar">
+    <div class="timer" id="timer">0.00</div>
+    <div class="next-hint">
+      <span class="next-label">Next</span>
+      <span class="next-number hidden" id="next-number">1</span>
+    </div>
+  </div>
+
+  <!-- Start / Restart button -->
+  <button class="start-btn" id="start-btn" onclick="startGame()">Start</button>
+
+  <!-- Grid -->
+  <div class="grid-wrapper">
+    <div class="grid size-4" id="grid"></div>
+  </div>
+
+  <!-- Message -->
+  <div class="message" id="message">Pick a grid size and press Start!</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────
+  let gridSize    = 4;
+  let mode        = 'feedback';   // 'feedback' | 'nofeedback'
+  let numbers     = [];           // shuffled array of 1..N²
+  let nextExpected = 1;
+  let total        = 0;
+  let gameRunning  = false;
+  let gameDone     = false;
+  let startTime    = 0;
+  let timerInterval = null;
+  let records      = { 4: null, 5: null, 6: null };
+
+  // Load records from localStorage
+  try {
+    const saved = JSON.parse(localStorage.getItem('nr-records') || '{}');
+    if (saved[4]) records[4] = saved[4];
+    if (saved[5]) records[5] = saved[5];
+    if (saved[6]) records[6] = saved[6];
+    renderRecords();
+  } catch(e) {}
+
+  // ── Setters ────────────────────────────────────────────────────────────
+  function setGrid(size) {
+    gridSize = size;
+    document.querySelectorAll('[data-grid]').forEach(b => {
+      b.classList.toggle('active', +b.dataset.grid === size);
+    });
+    resetGame();
+  }
+
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll('[data-mode]').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === m);
+    });
+    if (gameRunning) resetGame();
+  }
+
+  // ── Game core ──────────────────────────────────────────────────────────
+  function startGame() {
+    clearInterval(timerInterval);
+    total        = gridSize * gridSize;
+    numbers      = shuffle(Array.from({ length: total }, (_, i) => i + 1));
+    nextExpected = 1;
+    gameRunning  = true;
+    gameDone     = false;
+
+    const btn = document.getElementById('start-btn');
+    btn.textContent = 'Restart';
+    btn.classList.add('restart');
+
+    renderGrid();
+    setMessage('');
+
+    // Show "Next" only in feedback mode
+    const nextEl = document.getElementById('next-number');
+    if (mode === 'feedback') {
+      nextEl.textContent = '1';
+      nextEl.classList.remove('hidden');
+    } else {
+      nextEl.classList.add('hidden');
+    }
+
+    // Start timer
+    startTime = performance.now();
+    updateTimer();
+    timerInterval = setInterval(updateTimer, 50);
+
+    const timerEl = document.getElementById('timer');
+    timerEl.className = 'timer running';
+  }
+
+  function resetGame() {
+    clearInterval(timerInterval);
+    gameRunning = false;
+    gameDone    = false;
+    const btn = document.getElementById('start-btn');
+    btn.textContent = 'Start';
+    btn.classList.remove('restart');
+    document.getElementById('timer').className = 'timer';
+    document.getElementById('timer').textContent = '0.00';
+    document.getElementById('next-number').classList.add('hidden');
+    setMessage('Pick a grid size and press Start!');
+    renderGrid(true);
+  }
+
+  function handleCellPress(num, cellEl) {
+    if (!gameRunning || gameDone) return;
+
+    if (num === nextExpected) {
+      // Correct!
+      cellEl.classList.remove('active', 'wrong');
+      cellEl.classList.add(mode === 'feedback' ? 'correct-flash' : 'pressed-nofeedback');
+
+      setTimeout(() => {
+        cellEl.classList.remove('correct-flash', 'pressed-nofeedback');
+        cellEl.classList.add(mode === 'feedback' ? 'pressed' : 'pressed-nofeedback');
+        if (mode === 'nofeedback') {
+          // keep looking normal
+          cellEl.classList.remove('pressed-nofeedback');
+          cellEl.classList.add('active');
+        }
+      }, mode === 'feedback' ? 280 : 0);
+
+      nextExpected++;
+
+      if (mode === 'feedback') {
+        const nextEl = document.getElementById('next-number');
+        nextEl.textContent = nextExpected <= total ? nextExpected : '';
+        nextEl.style.transform = 'scale(1.25)';
+        setTimeout(() => nextEl.style.transform = '', 120);
+
+        // Highlight next target
+        document.querySelectorAll('.cell.next-target').forEach(c => c.classList.remove('next-target'));
+        if (nextExpected <= total) {
+          const nextCell = document.querySelector(`[data-num="${nextExpected}"]`);
+          if (nextCell) nextCell.classList.add('next-target');
+        }
+      }
+
+      if (nextExpected > total) {
+        finishGame();
+      }
+    } else {
+      // Wrong — flash red
+      cellEl.classList.remove('wrong');
+      void cellEl.offsetWidth; // reflow to restart animation
+      cellEl.classList.add('wrong');
+      setTimeout(() => cellEl.classList.remove('wrong'), 350);
+    }
+  }
+
+  function finishGame() {
+    clearInterval(timerInterval);
+    gameRunning = false;
+    gameDone    = true;
+
+    const elapsed = (performance.now() - startTime) / 1000;
+    document.getElementById('timer').textContent = elapsed.toFixed(2);
+    document.getElementById('timer').className   = 'timer done';
+    document.getElementById('next-number').classList.add('hidden');
+
+    // Mark all cells done
+    document.querySelectorAll('.cell').forEach(c => {
+      c.classList.remove('active', 'pressed', 'next-target');
+      c.classList.add('done-cell');
+    });
+
+    const btn = document.getElementById('start-btn');
+    btn.textContent = 'Play Again';
+
+    // Record logic
+    const prev = records[gridSize];
+    if (prev === null || elapsed < prev) {
+      records[gridSize] = elapsed;
+      saveRecords();
+      renderRecords();
+      setMessage(`🏆 New record! ${elapsed.toFixed(2)}s`, 'new-record');
+    } else {
+      setMessage(`✅ Done in ${elapsed.toFixed(2)}s — best is ${prev.toFixed(2)}s`, 'success');
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────
+  function renderGrid(idle = false) {
+    const grid = document.getElementById('grid');
+    grid.className = `grid size-${gridSize}`;
+
+    if (idle || numbers.length === 0) {
+      const idleNums = shuffle(Array.from({ length: gridSize * gridSize }, (_, i) => i + 1));
+      grid.innerHTML = idleNums.map(n => `
+        <div class="cell idle">${n}</div>
+      `).join('');
+      return;
+    }
+
+    grid.innerHTML = numbers.map(n => `
+      <div class="cell active" data-num="${n}">${n}</div>
+    `).join('');
+
+    // Attach touch & click listeners
+    grid.querySelectorAll('.cell').forEach(cell => {
+      const num = +cell.dataset.num;
+
+      // Prevent double-fire on touch devices
+      cell.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleCellPress(num, cell);
+      }, { passive: false });
+
+      cell.addEventListener('click', (e) => {
+        // Only fire on true mouse clicks (not touch-generated)
+        if (e.sourceCapabilities && !e.sourceCapabilities.firesTouchEvents) {
+          handleCellPress(num, cell);
+        } else if (!('ontouchstart' in window)) {
+          handleCellPress(num, cell);
+        }
+      });
+    });
+
+    // In feedback mode, highlight first target
+    if (mode === 'feedback') {
+      const firstCell = grid.querySelector('[data-num="1"]');
+      if (firstCell) firstCell.classList.add('next-target');
+    }
+  }
+
+  function renderRecords() {
+    [4, 5, 6].forEach(s => {
+      const el = document.getElementById(`rec-${s}`);
+      if (records[s] !== null) {
+        el.textContent = records[s].toFixed(2) + 's';
+        el.classList.remove('none');
+      } else {
+        el.textContent = '—';
+        el.classList.add('none');
+      }
+    });
+  }
+
+  // ── Timer ──────────────────────────────────────────────────────────────
+  function updateTimer() {
+    const elapsed = (performance.now() - startTime) / 1000;
+    document.getElementById('timer').textContent = elapsed.toFixed(2);
+  }
+
+  // ── Utils ──────────────────────────────────────────────────────────────
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function setMessage(text, cls = '') {
+    const el = document.getElementById('message');
+    el.textContent = text;
+    el.className = 'message' + (cls ? ` ${cls}` : '');
+  }
+
+  function saveRecords() {
+    try { localStorage.setItem('nr-records', JSON.stringify(records)); } catch(e) {}
+  }
+
+  // Init idle grid
+  renderGrid(true);
+</script>
+</body>
+</html>
