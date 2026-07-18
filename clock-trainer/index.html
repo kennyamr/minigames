@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Clock Trainer</title>
+    <style>
+		:root {
+			--bg: #0f0f13;
+			--surface: #1a1a24;
+			--surface2: #22222f;
+			--accent: #7c6fff;
+			--accent2: #ff6fad;
+			--success: #4ecca3;
+			--text: #f0f0f8;
+			--muted: #7a7a9a;
+			--border: #2a2a3e;
+			--radius: 14px;
+		}
+
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+			-webkit-tap-highlight-color: transparent;
+		}
+
+		html, body {
+			height: 100%;
+			background: var(--bg);
+			color: var(--text);
+			font-family: 'Segoe UI', system-ui, sans-serif;
+			overflow-x: hidden;
+		}
+
+		body {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			min-height: 100vh;
+			padding: 16px 14px 32px;
+			gap: 12px;
+		}
+
+		/* ── Header ── */
+		header {
+			width: 100%;
+			max-width: 420px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+
+		.logo {
+			font-size: 1.4rem;
+			font-weight: 800;
+			letter-spacing: -0.5px;
+			background: linear-gradient(135deg, var(--accent), var(--accent2));
+			-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+		}
+
+		.streak-badge {
+			display: flex;
+			align-items: center;
+			gap: 5px;
+			background: var(--surface);
+			border: 1.5px solid var(--border);
+			border-radius: 20px;
+			padding: 5px 12px;
+			font-size: 0.82rem;
+			font-weight: 700;
+			color: var(--success);
+		}
+
+		.streak-badge .s-label {
+			color: var(--muted);
+			font-weight: 500;
+			font-size: 0.72rem;
+		}
+
+		/* ── Prompt card ── */
+		.prompt-card {
+			width: 100%;
+			max-width: 420px;
+			background: var(--surface);
+			border: 1.5px solid var(--border);
+			border-radius: var(--radius);
+			padding: 16px 20px 14px;
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+			text-align: center;
+			transition: border-color 0.3s;
+		}
+
+		.prompt-card.correct { border-color: var(--success); }
+		.prompt-card.wrong   { border-color: var(--accent2); }
+
+		.prompt-eyebrow {
+			font-size: 0.68rem;
+			color: var(--muted);
+			text-transform: uppercase;
+			letter-spacing: 0.1em;
+			font-weight: 700;
+		}
+
+		.prompt-time {
+			font-size: 2.4rem;
+			font-weight: 900;
+			letter-spacing: -1.5px;
+			color: var(--text);
+			font-variant-numeric: tabular-nums;
+			line-height: 1;
+		}
+
+		.prompt-delta {
+			font-size: 0.9rem;
+			color: var(--muted);
+			font-weight: 500;
+			margin-top: 2px;
+		}
+
+		.prompt-delta strong {
+			color: var(--accent);
+			font-weight: 800;
+		}
+
+		.prompt-question {
+			font-size: 0.72rem;
+			color: var(--muted);
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			font-weight: 600;
+			margin-top: 2px;
+		}
+
+		.prompt-reveal {
+			font-size: 1.6rem;
+			font-weight: 800;
+			color: var(--success);
+			font-variant-numeric: tabular-nums;
+			line-height: 1;
+			min-height: 1.6rem;
+			opacity: 0;
+			transition: opacity 0.3s;
+			margin-top: 2px;
+		}
+
+		.prompt-reveal.show { opacity: 1; }
+
+		/* ── Message ── */
+		.message {
+			width: 100%;
+			max-width: 420px;
+			min-height: 34px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+			font-size: 0.88rem;
+			font-weight: 600;
+			color: var(--muted);
+			border-radius: 10px;
+			padding: 5px 12px;
+			line-height: 1.4;
+			transition: color 0.2s, background 0.2s;
+		}
+
+		.message.success { color: var(--success); }
+		.message.wrong   { color: var(--accent2); background: rgba(255,111,173,0.07); }
+
+		/* ── Clock wrapper — extra padding so outside labels never clip ── */
+		.clock-outer {
+			width: 100%;
+			max-width: 360px;
+			aspect-ratio: 1;
+			/* The SVG viewBox is 360×360; the clock face is 300×300 centered at 180,180
+               The outer labels sit at r≈158 from centre, so they need the extra room    */
+		}
+
+		.clock-svg {
+			width: 100%;
+			height: 100%;
+			display: block;
+			user-select: none;
+			-webkit-user-select: none;
+			touch-action: none;   /* let JS handle all pointer events */
+			cursor: grab;
+		}
+
+		.clock-svg:active { cursor: grabbing; }
+
+		/* ── Digital readout ── */
+		.clock-readout {
+			width: 100%;
+			max-width: 420px;
+			text-align: center;
+			font-size: 1.8rem;
+			font-weight: 800;
+			color: var(--text);
+			font-variant-numeric: tabular-nums;
+			letter-spacing: -0.5px;
+			line-height: 1;
+		}
+
+		/* ── Buttons ── */
+		.btn-row {
+			width: 100%;
+			max-width: 420px;
+			display: flex;
+			gap: 10px;
+		}
+
+		.btn-ok {
+			flex: 1;
+			padding: 15px;
+			border: none;
+			border-radius: var(--radius);
+			background: linear-gradient(135deg, var(--accent), #5a4fff);
+			color: #fff;
+			font-size: 1rem;
+			font-weight: 700;
+			letter-spacing: 0.04em;
+			cursor: pointer;
+			box-shadow: 0 4px 20px rgba(124,111,255,0.35);
+			transition: transform 0.1s, box-shadow 0.1s;
+			touch-action: manipulation;
+		}
+
+		.btn-ok:active { transform: scale(0.97); box-shadow: 0 2px 10px rgba(124,111,255,0.2); }
+
+		.btn-skip {
+			padding: 15px 18px;
+			border: 1.5px solid #35355a;
+			border-radius: var(--radius);
+			background: var(--surface2);
+			color: var(--muted);
+			font-size: 0.82rem;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.12s;
+			touch-action: manipulation;
+		}
+
+		.btn-skip:active { transform: scale(0.97); }
+
+		/* ── Start screen ── */
+		.start-screen {
+			width: 100%;
+			max-width: 420px;
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.start-info {
+			background: var(--surface);
+			border: 1.5px solid var(--border);
+			border-radius: var(--radius);
+			padding: 16px 18px;
+			font-size: 0.85rem;
+			color: var(--muted);
+			line-height: 1.75;
+		}
+
+		.start-info strong { color: var(--text); }
+
+		.btn-start {
+			width: 100%;
+			padding: 16px;
+			border: none;
+			border-radius: var(--radius);
+			background: linear-gradient(135deg, var(--accent), #5a4fff);
+			color: #fff;
+			font-size: 1.05rem;
+			font-weight: 700;
+			letter-spacing: 0.04em;
+			cursor: pointer;
+			box-shadow: 0 4px 24px rgba(124,111,255,0.35);
+			transition: transform 0.1s;
+			touch-action: manipulation;
+		}
+
+		.btn-start:active { transform: scale(0.97); }
+
+		@media (max-width: 360px) {
+			.prompt-time { font-size: 2rem; }
+			.clock-readout { font-size: 1.5rem; }
+		}
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">Clock Trainer</div>
+    <div class="streak-badge">
+        <span>🔥</span>
+        <span class="s-label">Streak</span>
+        <span id="streak-val">0</span>
+    </div>
+</header>
+
+<div class="prompt-card" id="prompt-card">
+    <div class="prompt-eyebrow">Current time</div>
+    <div class="prompt-time" id="prompt-time">—</div>
+    <div class="prompt-delta">Add <strong id="prompt-delta">—</strong></div>
+    <div class="prompt-question">→ What time will it be?</div>
+    <div class="prompt-reveal" id="prompt-reveal"></div>
+</div>
+
+<div class="message" id="message">Press Start to begin!</div>
+
+<!-- SVG viewBox is 360×360; clock face centred at 180,180 radius 130 -->
+<div class="clock-outer">
+    <svg id="clock-svg" class="clock-svg" viewBox="0 0 360 360"
+         xmlns="http://www.w3.org/2000/svg">
+
+        <!-- Face -->
+        <circle cx="180" cy="180" r="130" fill="#1a1a24" stroke="#35355a" stroke-width="2"/>
+        <circle cx="180" cy="180" r="123" fill="none" stroke="#22222f" stroke-width="1"/>
+
+        <!-- Tick marks (built by JS) -->
+        <g id="ticks"></g>
+
+        <!-- Hour numerals inside (built by JS) -->
+        <g id="hour-nums"></g>
+
+        <!-- Quarter-minute labels OUTSIDE the ring (built by JS) -->
+        <g id="qtr-labels"></g>
+
+        <!-- Hint group -->
+        <g id="hint-group" opacity="0" style="transition:opacity 0.4s">
+            <line id="hint-line" x1="180" y1="180" x2="180" y2="50"
+                  stroke="#ff6fad" stroke-width="3" stroke-linecap="round"
+                  stroke-dasharray="6 4" opacity="0.75"/>
+            <circle id="hint-dot" cx="180" cy="50" r="9"
+                    fill="none" stroke="#ff6fad" stroke-width="2.5"/>
+            <text id="hint-label" x="180" y="30"
+                  font-family="'Segoe UI',system-ui,sans-serif"
+                  font-size="14" font-weight="700"
+                  fill="#ff6fad" text-anchor="middle"
+                  dominant-baseline="central"></text>
+        </g>
+
+        <!-- Hour hand -->
+        <line id="hour-hand"
+              x1="180" y1="180" x2="180" y2="118"
+              stroke="#f0f0f8" stroke-width="6"
+              stroke-linecap="round"/>
+
+        <!-- Minute hand -->
+        <line id="min-hand"
+              x1="180" y1="180" x2="180" y2="58"
+              stroke="#7c6fff" stroke-width="4"
+              stroke-linecap="round"/>
+
+        <!-- Centre cap -->
+        <circle cx="180" cy="180" r="7"  fill="#7c6fff"/>
+        <circle cx="180" cy="180" r="3"  fill="#f0f0f8"/>
+    </svg>
+</div>
+
+<div class="clock-readout" id="clock-readout">--:--</div>
+
+<!-- Shown after startGame() -->
+<div class="btn-row" id="btn-row" style="display:none">
+    <button class="btn-ok"   onclick="submitAnswer()">✓ OK</button>
+    <button class="btn-skip" onclick="skipQuestion()">Skip →</button>
+</div>
+
+<!-- Start screen -->
+<div class="start-screen" id="start-screen">
+    <div class="start-info">
+        <strong>How to play</strong><br/>
+        You'll see a starting time and an amount to add.<br/>
+        Drag the <span style="color:#7c6fff;font-weight:700">purple minute hand</span>
+        around the clock to set your answer.<br/>
+        The <span style="color:#f0f0f8;font-weight:700">white hour hand</span>
+        follows automatically — just like a real clock.<br/><br/>
+        When you're happy with the time, press <strong>OK</strong> to confirm.
+    </div>
+    <button class="btn-start" onclick="startGame()">▶ Start</button>
+</div>
+
+<script>
+	// ─────────────────────────────────────
+	//  SVG geometry constants
+	// ─────────────────────────────────────
+	const CX = 180, CY = 180;      // clock centre in viewBox coords
+	const R_FACE   = 130;           // face radius
+	const R_TICK_O = 123;           // outer tick radius
+	const R_MIN    = 122;           // minute hand length (tip)
+	const R_HOUR   =  78;           // hour hand length   (tip)
+	const R_QTR_LABEL = 148;        // quarter labels sit OUTSIDE the ring
+
+	// ─────────────────────────────────────
+	//  State — all in one place, no globals scattered
+	// ─────────────────────────────────────
+	const state = {
+		active:      false,
+		streak:      0,
+		hintShown:   false,
+		// question
+		startH:      0,    // 0–11
+		startM:      0,    // 0,15,30,45
+		deltaMin:    0,
+		targetTotalMin: 0, // (startH*60+startM+deltaMin), NOT clamped to 720
+		// drag
+		dragging:    false,
+		lastRawAngle: 0,   // raw atan2 angle at last pointer event (−180..180)
+		// The single source of truth for where the clock is:
+		//   addedMin = how many minutes have been added by dragging (multiple of 15 when snapped)
+		//   During drag this is a continuous float; on release it snaps to nearest 15.
+		addedMinContinuous: 0,
+		addedMinSnapped:    0,
+	};
+
+	// ─────────────────────────────────────
+	//  Build clock face (static SVG)
+	// ─────────────────────────────────────
+	(function buildFace() {
+		const tG = document.getElementById('ticks');
+		const nG = document.getElementById('hour-nums');
+		const qG = document.getElementById('qtr-labels');
+
+		// ── Tick marks ──
+		for (let i = 0; i < 60; i++) {
+			const a    = (i / 60) * 2 * Math.PI;
+			const isQ  = i % 15 === 0;
+			const is5  = i % 5  === 0;
+			const rIn  = isQ ? R_TICK_O - 18 : is5 ? R_TICK_O - 12 : R_TICK_O - 5;
+			const col  = isQ ? '#7c6fff' : is5 ? '#55557a' : '#2e2e4a';
+			const sw   = isQ ? 3 : is5 ? 2 : 1;
+			const x1   = CX + R_TICK_O * Math.sin(a);
+			const y1   = CY - R_TICK_O * Math.cos(a);
+			const x2   = CX + rIn       * Math.sin(a);
+			const y2   = CY - rIn       * Math.cos(a);
+			const ln   = document.createElementNS('http://www.w3.org/2000/svg','line');
+			ln.setAttribute('x1', x1.toFixed(2)); ln.setAttribute('y1', y1.toFixed(2));
+			ln.setAttribute('x2', x2.toFixed(2)); ln.setAttribute('y2', y2.toFixed(2));
+			ln.setAttribute('stroke', col);
+			ln.setAttribute('stroke-width', sw);
+			ln.setAttribute('stroke-linecap', 'round');
+			tG.appendChild(ln);
+		}
+
+		// ── Hour numerals (inside, at r=107) ──
+		[12,1,2,3,4,5,6,7,8,9,10,11].forEach((h, i) => {
+			const a  = (i / 12) * 2 * Math.PI;
+			const r  = 107;
+			const tx = document.createElementNS('http://www.w3.org/2000/svg','text');
+			tx.setAttribute('x', (CX + r * Math.sin(a)).toFixed(2));
+			tx.setAttribute('y', (CY - r * Math.cos(a)).toFixed(2));
+			tx.setAttribute('text-anchor', 'middle');
+			tx.setAttribute('dominant-baseline', 'central');
+			tx.setAttribute('font-family', "'Segoe UI',system-ui,sans-serif");
+			tx.setAttribute('font-size',   h === 12 ? '17' : '15');
+			tx.setAttribute('font-weight', '700');
+			tx.setAttribute('fill', '#c0c0d8');
+			tx.textContent = h;
+			nG.appendChild(tx);
+		});
+
+		// ── Quarter-minute labels OUTSIDE the face ring ──
+		// placed at R_QTR_LABEL (> R_FACE), so they never overlap hour numerals
+		const qData = [
+			{ min: 0,  text: '0'  },
+			{ min: 15, text: '15' },
+			{ min: 30, text: '30' },
+			{ min: 45, text: '45' },
+		];
+		qData.forEach(q => {
+			const a  = (q.min / 60) * 2 * Math.PI;
+			const tx = document.createElementNS('http://www.w3.org/2000/svg','text');
+			tx.setAttribute('x', (CX + R_QTR_LABEL * Math.sin(a)).toFixed(2));
+			tx.setAttribute('y', (CY - R_QTR_LABEL * Math.cos(a)).toFixed(2));
+			tx.setAttribute('text-anchor', 'middle');
+			tx.setAttribute('dominant-baseline', 'central');
+			tx.setAttribute('font-family', "'Segoe UI',system-ui,sans-serif");
+			tx.setAttribute('font-size',  q.min === 0 ? '16' : '13');
+			tx.setAttribute('font-weight', q.min === 0 ? '900' : '600');
+			tx.setAttribute('fill', '#7c6fff');
+			tx.textContent = q.text;
+			qG.appendChild(tx);
+		});
+	})();
+
+	// ─────────────────────────────────────
+	//  Hand rendering
+	//  Single entry point — takes total added minutes (continuous float)
+	//  so clock and readout are always driven from the same number.
+	// ─────────────────────────────────────
+	function renderClock(addedMinContinuous) {
+		// ── Minute hand: based on continuous drag position ──
+		const totalMinContinuous = state.startH * 60 + state.startM + addedMinContinuous;
+		const minOfHour = ((totalMinContinuous % 60) + 60) % 60;    // 0–60 continuous
+		const minAngle  = (minOfHour / 60) * 360;                   // degrees
+
+		const mRad = minAngle * Math.PI / 180;
+		document.getElementById('min-hand').setAttribute('x2', (CX + R_MIN * Math.sin(mRad)).toFixed(3));
+		document.getElementById('min-hand').setAttribute('y2', (CY - R_MIN * Math.cos(mRad)).toFixed(3));
+
+		// ── Hour hand: moves continuously with total minutes ──
+		const totalMin720 = ((totalMinContinuous % 720) + 720) % 720;  // 0–720
+		const hourAngle   = (totalMin720 / 720) * 360;                  // 0–360 deg (full 12h = 360)
+
+		const hRad = hourAngle * Math.PI / 180;
+		document.getElementById('hour-hand').setAttribute('x2', (CX + R_HOUR * Math.sin(hRad)).toFixed(3));
+		document.getElementById('hour-hand').setAttribute('y2', (CY - R_HOUR * Math.cos(hRad)).toFixed(3));
+
+		// ── Digital readout: always driven from same continuous number ──
+		//    We snap to nearest 15 for display (matches what OK will submit)
+		const snappedAdded = Math.round(addedMinContinuous / 15) * 15;
+		const displayTotal = state.startH * 60 + state.startM + snappedAdded;
+		const displayMod   = ((displayTotal % 720) + 720) % 720;
+		const dH = Math.floor(displayMod / 60);
+		const dM = displayMod % 60;
+		document.getElementById('clock-readout').textContent =
+			pad(dH === 0 ? 12 : dH) + ':' + pad(dM);
+	}
+
+	// ─────────────────────────────────────
+	//  Drag — pointer-based (works for both mouse and touch)
+	// ─────────────────────────────────────
+	function rawAngle(clientX, clientY) {
+		const rect  = document.getElementById('clock-svg').getBoundingClientRect();
+		const scale = 360 / rect.width;   // viewBox is 360 wide
+		const x = (clientX - rect.left) * scale - CX;
+		const y = (clientY - rect.top)  * scale - CY;
+		return Math.atan2(x, -y) * (180 / Math.PI);  // −180..180, 0=top, CW+
+	}
+
+	function onPointerDown(e) {
+		if (!state.active) return;
+		e.preventDefault();
+		state.dragging    = true;
+		state.lastRawAngle = rawAngle(
+			e.touches ? e.touches[0].clientX : e.clientX,
+			e.touches ? e.touches[0].clientY : e.clientY
+		);
+	}
+
+	function onPointerMove(e) {
+		if (!state.dragging) return;
+		e.preventDefault();
+		const cx = e.touches ? e.touches[0].clientX : e.clientX;
+		const cy = e.touches ? e.touches[0].clientY : e.clientY;
+		const cur = rawAngle(cx, cy);
+
+		let delta = cur - state.lastRawAngle;
+		// Unwrap around ±180
+		if (delta >  180) delta -= 360;
+		if (delta < -180) delta += 360;
+
+		state.lastRawAngle = cur;
+
+		// Convert angular delta (degrees) → minutes delta
+		// 360° = 60 min  ⟹  1° = 1/6 min
+		const deltaMinutes = delta / 6;
+		state.addedMinContinuous += deltaMinutes;
+
+		// Clamp: allow back to 0 (start) and up to 3 hours forward
+		// But never let dragging BACKWARDS past start confuse things
+		state.addedMinContinuous = Math.max(0, Math.min(180, state.addedMinContinuous));
+
+		renderClock(state.addedMinContinuous);
+	}
+
+	function onPointerUp() {
+		if (!state.dragging) return;
+		state.dragging = false;
+		// Snap continuous value to nearest 15
+		state.addedMinSnapped     = Math.round(state.addedMinContinuous / 15) * 15;
+		state.addedMinContinuous  = state.addedMinSnapped;  // lock in
+		renderClock(state.addedMinContinuous);
+	}
+
+	const svg = document.getElementById('clock-svg');
+	svg.addEventListener('mousedown',  onPointerDown, { passive: false });
+	svg.addEventListener('touchstart', onPointerDown, { passive: false });
+	window.addEventListener('mousemove',  onPointerMove, { passive: false });
+	window.addEventListener('touchmove',  onPointerMove, { passive: false });
+	window.addEventListener('mouseup',  onPointerUp);
+	window.addEventListener('touchend', onPointerUp);
+
+	// ─────────────────────────────────────
+	//  Game logic
+	// ─────────────────────────────────────
+	function pad(n) { return String(n).padStart(2, '0'); }
+
+	function fmtMin(totalMin) {
+		const mod = ((totalMin % 720) + 720) % 720;
+		const h   = Math.floor(mod / 60);
+		const m   = mod % 60;
+		return pad(h === 0 ? 12 : h) + ':' + pad(m);
+	}
+
+	function startGame() {
+		document.getElementById('start-screen').style.display = 'none';
+		document.getElementById('btn-row').style.display      = '';
+		state.active = true;
+		state.streak = 0;
+		updateStreak();
+		nextQuestion();
+	}
+
+	function nextQuestion() {
+		state.hintShown = false;
+		hideHint();
+
+		document.getElementById('prompt-card').className = 'prompt-card';
+		document.getElementById('prompt-reveal').classList.remove('show');
+		document.getElementById('prompt-reveal').textContent = '';
+
+		// Pick random start time
+		state.startH   = Math.floor(Math.random() * 12);   // 0–11
+		state.startM   = [0, 15, 30, 45][Math.floor(Math.random() * 4)];
+
+		// Pick random delta: 1–8 × 15min = 15–120min
+		state.deltaMin = (Math.floor(Math.random() * 8) + 1) * 15;
+		state.targetTotalMin = state.startH * 60 + state.startM + state.deltaMin;
+
+		// Prompt text
+		const startLabel = pad(state.startH === 0 ? 12 : state.startH) + ':' + pad(state.startM);
+		document.getElementById('prompt-time').textContent = startLabel;
+
+		const dh = Math.floor(state.deltaMin / 60);
+		const dm = state.deltaMin % 60;
+		let dLabel = dh > 0 && dm > 0 ? dh + 'h ' + dm + 'min'
+			: dh > 0            ? dh + ' hour' + (dh > 1 ? 's' : '')
+				:                     dm + ' min';
+		document.getElementById('prompt-delta').textContent = dLabel;
+
+		// Reset drag state
+		state.addedMinContinuous = 0;
+		state.addedMinSnapped    = 0;
+
+		// Render clock at start time (0 added minutes)
+		renderClock(0);
+		setMsg('Drag the purple hand to set the answer.', '');
+	}
+
+	function submitAnswer() {
+		if (!state.active) return;
+
+		const resultTotal = state.startH * 60 + state.startM + state.addedMinSnapped;
+		const resultMod   = ((resultTotal  % 720) + 720) % 720;
+		const targetMod   = ((state.targetTotalMin % 720) + 720) % 720;
+
+		if (resultMod === targetMod) {
+			// ── Correct ──
+			state.streak++;
+			updateStreak();
+			document.getElementById('prompt-card').className = 'prompt-card correct';
+			const answerStr = fmtMin(state.targetTotalMin);
+			document.getElementById('prompt-reveal').textContent = '✓ ' + answerStr;
+			document.getElementById('prompt-reveal').classList.add('show');
+			setMsg('🎉 Well done! Next question coming up…', 'success');
+			hideHint();
+			setTimeout(() => { if (state.active) nextQuestion(); }, 1700);
+		} else {
+			// ── Wrong ──
+			state.streak = 0;
+			updateStreak();
+			document.getElementById('prompt-card').className = 'prompt-card wrong';
+
+			if (!state.hintShown) {
+				state.hintShown = true;
+				showHint(targetMod);
+				setMsg('Almost there! The pink marker shows the right spot. Try again 💪', 'wrong');
+			} else {
+				setMsg("You're getting there — keep trying! 💪", 'wrong');
+			}
+		}
+	}
+
+	function skipQuestion() {
+		if (!state.active) return;
+		state.streak = 0;
+		updateStreak();
+		setMsg('No problem — here comes a new one!', '');
+		setTimeout(() => nextQuestion(), 500);
+	}
+
+	// ─────────────────────────────────────
+	//  Hint
+	// ─────────────────────────────────────
+	function showHint(targetMod) {
+		const tMin     = targetMod % 60;
+		const tAngleDeg = (tMin / 60) * 360;
+		const tRad      = tAngleDeg * Math.PI / 180;
+
+		// Tip of minute hand at the target position
+		const ex = CX + R_MIN * Math.sin(tRad);
+		const ey = CY - R_MIN * Math.cos(tRad);
+
+		// Label a bit further out
+		const rL = R_MIN + 22;
+		const lx = CX + rL * Math.sin(tRad);
+		const ly = CY - rL * Math.cos(tRad);
+
+		document.getElementById('hint-line').setAttribute('x2', ex.toFixed(2));
+		document.getElementById('hint-line').setAttribute('y2', ey.toFixed(2));
+		document.getElementById('hint-dot').setAttribute('cx',  ex.toFixed(2));
+		document.getElementById('hint-dot').setAttribute('cy',  ey.toFixed(2));
+		document.getElementById('hint-label').setAttribute('x', lx.toFixed(2));
+		document.getElementById('hint-label').setAttribute('y', ly.toFixed(2));
+		document.getElementById('hint-label').textContent = fmtMin(state.targetTotalMin);
+
+		document.getElementById('hint-group').setAttribute('opacity', '1');
+	}
+
+	function hideHint() {
+		document.getElementById('hint-group').setAttribute('opacity', '0');
+	}
+
+	// ─────────────────────────────────────
+	//  UI helpers
+	// ─────────────────────────────────────
+	function updateStreak() {
+		document.getElementById('streak-val').textContent = state.streak;
+		document.querySelector('.streak-badge').style.color =
+			state.streak >= 3 ? 'var(--accent2)' : 'var(--success)';
+	}
+
+	function setMsg(text, cls) {
+		const el = document.getElementById('message');
+		el.textContent = text;
+		el.className   = 'message' + (cls ? ' ' + cls : '');
+	}
+
+	// ─────────────────────────────────────
+	//  Initial idle pose  (classic 10:10)
+	// ─────────────────────────────────────
+	state.startH = 10; state.startM = 10;
+	renderClock(0);
+	state.startH = 0;  state.startM = 0;  // reset before real game starts
+</script>
+</body>
+</html>
